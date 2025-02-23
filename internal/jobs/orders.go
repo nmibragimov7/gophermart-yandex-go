@@ -46,35 +46,36 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 
 		var once *sync.Once
 		doneCh := make(chan struct{})
-		errCh := make(chan error, 1)
-		responsesCh := p.fanOut(once, doneCh, errCh, orders)
+		errorCh := make(chan error, 1)
+		responsesCh := p.fanOut(once, doneCh, errorCh, orders)
 		resultsCh := p.fanIn(doneCh, responsesCh...)
 
 		result := make([]*entity.AccrualWithUserID, 0)
 
 		select {
-		case err := <-errCh:
+		case err := <-errorCh:
 			once.Do(func() { close(doneCh) })
+			once.Do(func() { close(errorCh) })
 
 			var tooManyRequests *response.TooManyRequestsError
 			if errors.As(err, &tooManyRequests) {
 				interval = time.Duration(tooManyRequests.RetryAfter) * time.Second
 			}
 
-			err = p.Repository.UpdateOrderBatches(result)
-			if err != nil {
-				p.Sugar.Errorw("Failed to update orders",
-					"error", err,
-				)
-			}
-
-			grouped := groupOrders(result)
-			err = p.Repository.UpdateBalanceBatches(grouped)
-			if err != nil {
-				p.Sugar.Errorw("Failed to update balances",
-					"error", err,
-				)
-			}
+			//err = p.Repository.UpdateOrderBatches(result)
+			//if err != nil {
+			//	p.Sugar.Errorw("Failed to update orders",
+			//		"error", err,
+			//	)
+			//}
+			//
+			//grouped := groupOrders(result)
+			//err = p.Repository.UpdateBalanceBatches(grouped)
+			//if err != nil {
+			//	p.Sugar.Errorw("Failed to update balances",
+			//		"error", err,
+			//	)
+			//}
 
 			continue
 		default:
