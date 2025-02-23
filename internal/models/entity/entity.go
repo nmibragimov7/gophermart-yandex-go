@@ -4,13 +4,6 @@ import (
 	"time"
 )
 
-const (
-	OrderStatusNew        string = "NEW"
-	OrderStatusProcessed  string = "PROCESSED"
-	OderStatusInvalid     string = "INVALID"
-	OrderStatusProcessing string = "PROCESSING"
-)
-
 type User struct {
 	ID        int64  `json:"id"`
 	Login     string `json:"login"`
