@@ -85,5 +85,6 @@ func (p *HandlerProvider) LoginHandler(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"token": token})
+	c.Header("Authorization", `Bearer `+token)
+	c.Status(http.StatusOK)
 }
