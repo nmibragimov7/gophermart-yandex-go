@@ -23,7 +23,19 @@ func (p *HandlerProvider) RegisterHandler(c *gin.Context) {
 		return
 	}
 
-	err = p.Repository.SaveUser(&body)
+	ssp := session.SessionProvider{
+		Config: p.Config,
+	}
+
+	hashPass, err := ssp.HashPassword(body.Password)
+	if err != nil {
+		sendErrorResponse(c, p.Sugar, http.StatusBadRequest, err)
+		return
+	}
+
+	body.Password = hashPass
+
+	userID, err := p.Repository.SaveUser(&body)
 	if err != nil {
 		var duplicateError *repository.DuplicateError
 		if errors.As(err, &duplicateError) {
@@ -35,6 +47,9 @@ func (p *HandlerProvider) RegisterHandler(c *gin.Context) {
 		return
 	}
 
+	token, err := ssp.CreateToken(userID)
+
+	c.Header("Authorization", `Bearer `+token)
 	c.Status(http.StatusOK)
 }
 func (p *HandlerProvider) LoginHandler(c *gin.Context) {

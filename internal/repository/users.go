@@ -25,10 +25,10 @@ func (p *RepositoryProvider) GetUser(values *request.Login) (*entity.User, error
 
 	return &record, nil
 }
-func (p *RepositoryProvider) SaveUser(values *request.Register) error {
+func (p *RepositoryProvider) SaveUser(values *request.Register) (int64, error) {
 	tx, err := p.DB.Begin()
 	if err != nil {
-		return fmt.Errorf("failed to start transaction: %w", err)
+		return 0, fmt.Errorf("failed to start transaction: %w", err)
 	}
 
 	defer func() {
@@ -38,27 +38,27 @@ func (p *RepositoryProvider) SaveUser(values *request.Register) error {
 		}
 	}()
 
-	var userID int
+	var userID int64
 	err = tx.QueryRow(InsertUser, values.Login, values.Password).Scan(&userID)
 	if err != nil {
 		var pgErr *pq.Error
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
-			return fmt.Errorf("user already exists: %w", NewDuplicateError(
+			return 0, fmt.Errorf("user already exists: %w", NewDuplicateError(
 				pgerrcode.UniqueViolation,
 				err,
 			))
 		}
-		return fmt.Errorf("failed to insert user: %w", err)
+		return 0, fmt.Errorf("failed to insert user: %w", err)
 	}
 
 	_, err = tx.Exec(CreateBalance, userID)
 	if err != nil {
-		return fmt.Errorf("failed to create balance: %w", err)
+		return 0, fmt.Errorf("failed to create balance: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	return nil
+	return userID, nil
 }

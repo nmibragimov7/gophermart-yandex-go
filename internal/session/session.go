@@ -27,7 +27,14 @@ type Claims struct {
 func (p *SessionProvider) ComparePasswords(hashedPassword, password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)) == nil
 }
-
+func (p *SessionProvider) HashPassword(password string) (string, error) {
+	pw := []byte(password)
+	result, err := bcrypt.GenerateFromPassword(pw, bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(result), nil
+}
 func (p *SessionProvider) CreateToken(userID int64) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -43,7 +50,6 @@ func (p *SessionProvider) CreateToken(userID int64) (string, error) {
 
 	return signed, nil
 }
-
 func (p *SessionProvider) ParseToken(c *gin.Context) (int64, error) {
 	auth := c.GetHeader(authorizationHeaderKey)
 	if len(auth) < 7 {
@@ -71,7 +77,6 @@ func (p *SessionProvider) ParseToken(c *gin.Context) (int64, error) {
 
 	return claims.UserID, nil
 }
-
 func (p *SessionProvider) CheckToken(c *gin.Context) error {
 	auth := c.GetHeader(authorizationHeaderKey)
 	if len(auth) < 7 {
