@@ -31,12 +31,12 @@ func (p *RouterProvider) Router() *gin.Engine {
 	r.POST("/api/user/register", p.Handler.RegisterHandler)
 	r.POST("/api/user/login", p.Handler.LoginHandler)
 
-	r.Use(middleware.AuthMiddleware(sugarWithCtx, p.Config))
-	r.POST("/api/user/orders", p.Handler.OrderSaveHandler)
-	r.GET("/api/user/orders", p.Handler.OrdersHandler)
-	r.GET("/api/user/balance", p.Handler.BalanceHandler)
-	r.POST("/api/user/balance/withdraw", p.Handler.WithdrawHandler)
-	r.GET("/api/user/withdrawals", p.Handler.WithdrawalsHandler)
+	auth := r.Use(middleware.AuthMiddleware(sugarWithCtx, p.Config))
+	auth.POST("/api/user/orders", p.Handler.OrderSaveHandler)
+	auth.GET("/api/user/orders", p.Handler.OrdersHandler)
+	auth.GET("/api/user/balance", p.Handler.BalanceHandler)
+	auth.POST("/api/user/balance/withdraw", p.Handler.WithdrawHandler)
+	auth.GET("/api/user/withdrawals", p.Handler.WithdrawalsHandler)
 
 	return r
 }

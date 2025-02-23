@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"go-musthave-diploma-tpl/internal/models/request"
 	"go-musthave-diploma-tpl/internal/repository"
 	"go-musthave-diploma-tpl/internal/session"
@@ -65,6 +66,7 @@ func (p *HandlerProvider) LoginHandler(c *gin.Context) {
 	}
 
 	user, err := p.Repository.GetUser(&body)
+	fmt.Println("user", user)
 	if err != nil {
 		sendErrorResponse(c, p.Sugar, http.StatusInternalServerError, err)
 		return
@@ -74,7 +76,7 @@ func (p *HandlerProvider) LoginHandler(c *gin.Context) {
 		Config: p.Config,
 	}
 
-	if !ssp.ComparePasswords(body.Password, user.Password) {
+	if !ssp.ComparePasswords(user.Password, body.Password) {
 		sendErrorResponse(c, p.Sugar, http.StatusUnauthorized, err)
 		return
 	}
