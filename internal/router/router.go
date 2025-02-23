@@ -27,7 +27,6 @@ func (p *RouterProvider) Router() *gin.Engine {
 		"func", "Router",
 	)
 
-	r.Use(middleware.GzipMiddleware(sugarWithCtx))
 	r.POST("/api/user/register", p.Handler.RegisterHandler)
 	r.POST("/api/user/login", p.Handler.LoginHandler)
 
