@@ -15,7 +15,6 @@ const (
 	SelectOrder                          = "SELECT number, user_id FROM orders WHERE number = $1"
 	SelectAllOrders                      = "SELECT number, accrual, status, uploaded_at FROM orders WHERE user_id = $1"
 	InsertOrder                          = "INSERT INTO orders (number, user_id) VALUES ($1, $2)"
-	UpdateOrder                          = "UPDATE orders SET status = $1, accrual = $2 WHERE number = $3"
 	SelectOrdersByNewAndProcessingStatus = `SELECT number, user_id FROM orders WHERE status in ('NEW','PROCESSING') ORDER BY uploaded_at LIMIT $1`
 )
 
@@ -66,8 +65,10 @@ func (p *RepositoryProvider) GetOrderWithUserID(number string) (*entity.OrderWit
 func (p *RepositoryProvider) SaveOrder(data *entity.OrderWithUserID) error {
 	_, err := p.DB.Exec(InsertOrder, data.Number, data.UserID)
 	if err != nil {
+		fmt.Println("err", err)
 		var pgErr *pq.Error
 		if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+			fmt.Println("duplicate order", pgErr)
 			return fmt.Errorf("order already exists: %w", NewDuplicateError(
 				pgerrcode.UniqueViolation,
 				err,
