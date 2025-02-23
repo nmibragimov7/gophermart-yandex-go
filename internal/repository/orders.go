@@ -63,6 +63,7 @@ func (p *RepositoryProvider) GetOrderWithUserID(number string) (*entity.OrderWit
 	return &record, nil
 }
 func (p *RepositoryProvider) SaveOrder(data *entity.OrderWithUserID) error {
+	log.Println("data", data)
 	_, err := p.DB.Exec(InsertOrder, data.Number, data.UserID)
 	if err != nil {
 		fmt.Println("err", err)

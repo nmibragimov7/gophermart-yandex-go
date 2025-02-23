@@ -34,7 +34,7 @@ func (p *HandlerProvider) OrderSaveHandler(c *gin.Context) {
 		return
 	}
 
-	_, err = p.Repository.GetOrderWithUserID(orderNumber)
+	order, err := p.Repository.GetOrderWithUserID(orderNumber)
 	if err != nil {
 		var notFoundError *repository.NotFoundError
 		if !errors.As(err, &notFoundError) {
@@ -58,6 +58,11 @@ func (p *HandlerProvider) OrderSaveHandler(c *gin.Context) {
 		}
 
 		c.Status(http.StatusAccepted)
+		return
+	}
+
+	if userID != order.UserID {
+		sendErrorResponse(c, p.Sugar, http.StatusConflict, err)
 		return
 	}
 
