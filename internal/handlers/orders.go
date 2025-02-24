@@ -85,5 +85,10 @@ func (p *HandlerProvider) OrdersHandler(c *gin.Context) {
 		return
 	}
 
+	if len(orders) == 0 {
+		sendErrorResponse(c, p.Sugar, http.StatusNoContent, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, orders)
 }
