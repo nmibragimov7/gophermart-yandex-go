@@ -121,14 +121,14 @@ func (p *JobProvider) fanIn(once *sync.Once, doneCh chan struct{}, responsesCh .
 		go func(ch chan *entity.AccrualWithUserID) {
 			defer wg.Done()
 
-			for data := range closureCh {
+			for data := range ch {
 				select {
 				case <-doneCh:
 					return
 				case p.Channel <- data:
 				}
 			}
-		}(ch)
+		}(closureCh)
 	}
 	go func() {
 		wg.Wait()
