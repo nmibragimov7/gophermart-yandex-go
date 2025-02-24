@@ -78,7 +78,7 @@ func run() error {
 		Sugar:      sgr,
 		Repository: rps,
 	}
-	go jbp.Run(time.Duration(20) * time.Second)
+	go jbp.Run(time.Duration(5) * time.Second)
 	go jbp.Flush()
 	return nil
 }
