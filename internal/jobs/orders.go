@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"errors"
 	"go-musthave-diploma-tpl/internal/config"
 	"go-musthave-diploma-tpl/internal/models/entity"
@@ -24,7 +25,7 @@ const (
 )
 
 func (p *JobProvider) Flush() {
-	ticker := time.NewTicker(5 * time.Second)
+	ticker := time.NewTicker(10 * time.Second)
 
 	var updates []*entity.AccrualWithUserID
 
@@ -79,32 +80,26 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 			continue
 		}
 
-		var once *sync.Once
+		once := new(sync.Once)
 		doneCh := make(chan struct{})
 		errorCh := make(chan error, len(orders))
 		responsesCh := p.fanOut(once, doneCh, errorCh, orders)
-		p.fanIn(doneCh, responsesCh...)
+		p.fanIn(once, doneCh, responsesCh...)
 
 		select {
 		case <-timer.C:
 			interval = initialInterval
-			timer.Reset(interval)
 		case err := <-errorCh:
 			var tooManyRequests *response.TooManyRequestsError
 			if errors.As(err, &tooManyRequests) {
 				interval = time.Duration(tooManyRequests.RetryAfter) * time.Second
 			}
-
-			timer.Reset(interval)
 		}
 
-		//once.Do(func() { close(doneCh) })
-		//
-		//if !timer.Stop() {
-		//	<-timer.C
-		//}
-		//interval = initialInterval
-		//timer.Reset(interval)
+		if !timer.Stop() {
+			<-timer.C
+		}
+		timer.Reset(interval)
 	}
 }
 func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
@@ -116,7 +111,7 @@ func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan
 
 	return channels
 }
-func (p *JobProvider) fanIn(doneCh chan struct{}, responsesCh ...chan *entity.AccrualWithUserID) {
+func (p *JobProvider) fanIn(once *sync.Once, doneCh chan struct{}, responsesCh ...chan *entity.AccrualWithUserID) {
 	var wg sync.WaitGroup
 
 	for _, ch := range responsesCh {
@@ -137,6 +132,7 @@ func (p *JobProvider) fanIn(doneCh chan struct{}, responsesCh ...chan *entity.Ac
 	}
 	go func() {
 		wg.Wait()
+		once.Do(func() { close(doneCh) })
 	}()
 }
 func (p *JobProvider) sendRequest(once *sync.Once, doneCh chan struct{}, errorCh chan error, order *entity.OrderWithUserID) chan *entity.AccrualWithUserID {
@@ -145,12 +141,15 @@ func (p *JobProvider) sendRequest(once *sync.Once, doneCh chan struct{}, errorCh
 	go func() {
 		defer close(channel)
 
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
 		ord := order
 		select {
 		case <-doneCh:
 			return
 		default:
-			res, err := p.getOrderStatus(ord.Number) // запрос на другой сервис по http
+			res, err := p.getOrderStatus(ctx, ord.Number)
 			if err != nil {
 				errorCh <- err
 				once.Do(func() { close(doneCh) })

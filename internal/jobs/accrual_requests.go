@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,10 +12,10 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-func (p *JobProvider) getOrderStatus(order string) (*response.Accrual, error) {
+func (p *JobProvider) getOrderStatus(ctx context.Context, order string) (*response.Accrual, error) {
 	client := resty.New()
 	uri := *p.Config.Accrual + "/api/orders/" + order
-	resp, err := client.R().Get(uri)
+	resp, err := client.R().SetContext(ctx).Get(uri)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get order status: %w", err)
 	}
