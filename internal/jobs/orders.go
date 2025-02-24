@@ -13,14 +13,49 @@ import (
 )
 
 type JobProvider struct {
-	Config     *config.Config
 	Sugar      *zap.SugaredLogger
+	Config     *config.Config
+	Channel    chan *entity.AccrualWithUserID
 	Repository *repository.RepositoryProvider
 }
 
 const (
 	jobsCount = 4
 )
+
+func (p *JobProvider) Flush() {
+	ticker := time.NewTicker(5 * time.Second)
+
+	var updates []*entity.AccrualWithUserID
+
+	for {
+		select {
+		case update := <-p.Channel:
+			updates = append(updates, update)
+		case <-ticker.C:
+			if len(updates) == 0 {
+				continue
+			}
+
+			err := p.Repository.UpdateOrderBatches(updates)
+			if err != nil {
+				p.Sugar.Errorw("Failed to update orders",
+					"error", err,
+				)
+			}
+
+			grouped := groupOrders(updates)
+			err = p.Repository.UpdateBalanceBatches(grouped)
+			if err != nil {
+				p.Sugar.Errorw("Failed to update balances",
+					"error", err,
+				)
+			}
+
+			updates = nil
+		}
+	}
+}
 
 func (p *JobProvider) Run(initialInterval time.Duration) {
 	interval := initialInterval
@@ -46,65 +81,30 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 
 		var once *sync.Once
 		doneCh := make(chan struct{})
-		errorCh := make(chan error, 1)
+		errorCh := make(chan error, len(orders))
 		responsesCh := p.fanOut(once, doneCh, errorCh, orders)
-		resultsCh := p.fanIn(doneCh, responsesCh...)
-
-		result := make([]*entity.AccrualWithUserID, 0)
+		p.fanIn(doneCh, responsesCh...)
 
 		select {
+		case <-timer.C:
+			interval = initialInterval
+			timer.Reset(interval)
 		case err := <-errorCh:
-			once.Do(func() { close(doneCh) })
-			once.Do(func() { close(errorCh) })
-
 			var tooManyRequests *response.TooManyRequestsError
 			if errors.As(err, &tooManyRequests) {
 				interval = time.Duration(tooManyRequests.RetryAfter) * time.Second
 			}
 
-			//err = p.Repository.UpdateOrderBatches(result)
-			//if err != nil {
-			//	p.Sugar.Errorw("Failed to update orders",
-			//		"error", err,
-			//	)
-			//}
-			//
-			//grouped := groupOrders(result)
-			//err = p.Repository.UpdateBalanceBatches(grouped)
-			//if err != nil {
-			//	p.Sugar.Errorw("Failed to update balances",
-			//		"error", err,
-			//	)
-			//}
-
-			continue
-		default:
-			for data := range resultsCh {
-				result = append(result, data)
-			}
+			timer.Reset(interval)
 		}
 
-		err = p.Repository.UpdateOrderBatches(result)
-		if err != nil {
-			p.Sugar.Errorw("Failed to update orders",
-				"error", err,
-			)
-		}
-
-		grouped := groupOrders(result)
-		err = p.Repository.UpdateBalanceBatches(grouped)
-		if err != nil {
-			p.Sugar.Errorw("Failed to update balances",
-				"error", err,
-			)
-		}
-
-		once.Do(func() { close(doneCh) })
-
-		if !timer.Stop() {
-			<-timer.C
-		}
-		timer.Reset(interval)
+		//once.Do(func() { close(doneCh) })
+		//
+		//if !timer.Stop() {
+		//	<-timer.C
+		//}
+		//interval = initialInterval
+		//timer.Reset(interval)
 	}
 }
 func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
@@ -116,8 +116,7 @@ func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan
 
 	return channels
 }
-func (p *JobProvider) fanIn(doneCh chan struct{}, responsesCh ...chan *entity.AccrualWithUserID) chan *entity.AccrualWithUserID {
-	channel := make(chan *entity.AccrualWithUserID)
+func (p *JobProvider) fanIn(doneCh chan struct{}, responsesCh ...chan *entity.AccrualWithUserID) {
 	var wg sync.WaitGroup
 
 	for _, ch := range responsesCh {
@@ -131,17 +130,14 @@ func (p *JobProvider) fanIn(doneCh chan struct{}, responsesCh ...chan *entity.Ac
 				select {
 				case <-doneCh:
 					return
-				case channel <- data:
+				case p.Channel <- data:
 				}
 			}
 		}(ch)
 	}
 	go func() {
 		wg.Wait()
-		close(channel)
 	}()
-
-	return channel
 }
 func (p *JobProvider) sendRequest(once *sync.Once, doneCh chan struct{}, errorCh chan error, order *entity.OrderWithUserID) chan *entity.AccrualWithUserID {
 	channel := make(chan *entity.AccrualWithUserID)
