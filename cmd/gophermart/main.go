@@ -71,14 +71,16 @@ func run() error {
 		Session:    ssp,
 	}
 
-	sgr.Error(http.ListenAndServe(*cnf.Server, rtr.Router()))
-
 	jbp := jobs.JobProvider{
 		Config:     cnf,
 		Sugar:      sgr,
 		Repository: rps,
 	}
-	go jbp.Run(time.Duration(5) * time.Second)
+	go jbp.Run(time.Duration(10) * time.Second)
 	go jbp.Flush()
+
+	sgr.Error(http.ListenAndServe(*cnf.Server, rtr.Router()))
+
+	fmt.Println("kek")
 	return nil
 }

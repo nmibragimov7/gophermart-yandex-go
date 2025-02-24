@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go-musthave-diploma-tpl/internal/config"
 	"go-musthave-diploma-tpl/internal/models/entity"
 	"go-musthave-diploma-tpl/internal/models/response"
@@ -25,13 +26,18 @@ const (
 )
 
 func (p *JobProvider) Flush() {
-	ticker := time.NewTicker(10 * time.Second)
+	fmt.Println("Flush")
+
+	ticker := time.NewTicker(5 * time.Second)
 
 	var updates []*entity.AccrualWithUserID
 
 	for {
+		fmt.Println("updates", updates)
+
 		select {
 		case update := <-p.Channel:
+			fmt.Println("update 1", update)
 			updates = append(updates, update)
 		case <-ticker.C:
 			if len(updates) == 0 {
@@ -59,12 +65,15 @@ func (p *JobProvider) Flush() {
 }
 
 func (p *JobProvider) Run(initialInterval time.Duration) {
+	fmt.Println("Run")
 	interval := initialInterval
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 
 	for {
 		orders, err := p.Repository.GetNewOrders(jobsCount)
+		fmt.Println("orders", orders)
+
 		if err != nil {
 			p.Sugar.Errorw("Failed to get new orders",
 				"error", err,
@@ -96,9 +105,7 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 			}
 		}
 
-		if !timer.Stop() {
-			<-timer.C
-		}
+		<-timer.C
 		timer.Reset(interval)
 	}
 }

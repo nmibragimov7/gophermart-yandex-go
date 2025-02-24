@@ -24,7 +24,7 @@ func Init() *Config {
 	flags := flag.NewFlagSet("config", flag.ContinueOnError)
 
 	instance.Server = flags.String("a", ":4200", "Server address")
-	instance.Accrual = flags.String("r", ":8080", "Accrual address")
+	instance.Accrual = flags.String("r", "http://localhost:8080", "Accrual address")
 	instance.SecretKey = flags.String("s", "secret_key", "JWT secret key")
 	instance.DataBase = flags.String(
 		"d",
