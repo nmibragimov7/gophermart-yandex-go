@@ -49,6 +49,10 @@ func (p *HandlerProvider) RegisterHandler(c *gin.Context) {
 	}
 
 	token, err := ssp.CreateToken(userID)
+	if err != nil {
+		sendErrorResponse(c, p.Sugar, http.StatusInternalServerError, err)
+		return
+	}
 
 	c.Header("Authorization", `Bearer `+token)
 	c.Status(http.StatusOK)
