@@ -104,6 +104,11 @@ func (p *RepositoryProvider) GetNewOrders(limit int) ([]*entity.OrderWithUserID,
 		}
 		records = append(records, &entity.OrderWithUserID{Number: number, UserID: userID})
 	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to scan records: %w", err)
+	}
+
 	return records, nil
 }
 func (p *RepositoryProvider) UpdateOrderBatches(data []*entity.AccrualWithUserID) error {
