@@ -45,15 +45,17 @@ func (p *JobProvider) Flush() {
 				)
 			}
 
-			grouped := groupOrders(updates)
-			err = p.Repository.UpdateBalanceBatches(grouped)
-			if err != nil {
-				p.Sugar.Errorw("Failed to update balances",
-					"error", err,
-				)
-			}
+			if err == nil {
+				grouped := groupOrders(updates)
+				err = p.Repository.UpdateBalanceBatches(grouped)
+				if err != nil {
+					p.Sugar.Errorw("Failed to update balances",
+						"error", err,
+					)
+				}
 
-			updates = nil
+				updates = nil
+			}
 		}
 	}
 }
