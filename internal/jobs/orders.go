@@ -3,7 +3,6 @@ package jobs
 import (
 	"context"
 	"errors"
-	"fmt"
 	"go-musthave-diploma-tpl/internal/config"
 	"go-musthave-diploma-tpl/internal/models/entity"
 	"go-musthave-diploma-tpl/internal/models/response"
@@ -26,21 +25,15 @@ const (
 )
 
 func (p *JobProvider) Flush() {
-	fmt.Println("Flush")
-
 	ticker := time.NewTicker(5 * time.Second)
 
 	var updates []*entity.AccrualWithUserID
 
 	for {
-		fmt.Println("updates", updates)
-
 		select {
 		case update := <-p.Channel:
-			fmt.Println("update 1", update)
 			updates = append(updates, update)
 		case <-ticker.C:
-			fmt.Println("tick", updates)
 			if len(updates) == 0 {
 				continue
 			}
@@ -66,15 +59,12 @@ func (p *JobProvider) Flush() {
 }
 
 func (p *JobProvider) Run(initialInterval time.Duration) {
-	fmt.Println("Run")
 	interval := initialInterval
 	timer := time.NewTimer(interval)
 	defer timer.Stop()
 
 	for {
 		orders, err := p.Repository.GetNewOrders(jobsCount)
-		fmt.Println("orders", orders)
-
 		if err != nil {
 			p.Sugar.Errorw("Failed to get new orders",
 				"error", err,
@@ -99,19 +89,14 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 		select {
 		case <-timer.C:
 			interval = initialInterval
-			fmt.Println("timer.C", interval)
 			timer.Reset(interval)
 		case err := <-errorCh:
 			var tooManyRequests *response.TooManyRequestsError
 			if errors.As(err, &tooManyRequests) {
 				interval = time.Duration(tooManyRequests.RetryAfter) * time.Second
 			}
-			fmt.Println("errorCh", interval)
 			timer.Reset(interval)
 		}
-
-		//<-timer.C
-		//timer.Reset(interval)
 	}
 }
 func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
@@ -145,7 +130,6 @@ func (p *JobProvider) fanIn(once *sync.Once, doneCh chan struct{}, responsesCh .
 			case <-doneCh:
 				return
 			case res := <-ch:
-				fmt.Println("res", res)
 				p.Channel <- res
 			}
 		}(closureCh)
@@ -175,7 +159,6 @@ func (p *JobProvider) sendRequest(once *sync.Once, doneCh chan struct{}, errorCh
 				once.Do(func() { close(doneCh) })
 				return
 			}
-			fmt.Println("keeeeeek")
 			channel <- &entity.AccrualWithUserID{
 				UserID:  ord.UserID,
 				Order:   res.Order,

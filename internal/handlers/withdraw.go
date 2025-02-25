@@ -6,7 +6,7 @@ import (
 	"go-musthave-diploma-tpl/internal/models/request"
 	"go-musthave-diploma-tpl/internal/repository"
 	"go-musthave-diploma-tpl/internal/session"
-	"go-musthave-diploma-tpl/internal/utils/moonChecker"
+	"go-musthave-diploma-tpl/internal/utils/moonchecker"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -38,7 +38,7 @@ func (p *HandlerProvider) WithdrawHandler(c *gin.Context) {
 		sendErrorResponse(c, p.Sugar, http.StatusBadRequest, errors.New("sum must be positive"))
 	}
 
-	if body.Order == "" || !moonChecker.MoonChecker(body.Order) {
+	if body.Order == "" || !moonchecker.MoonChecker(body.Order) {
 		sendErrorResponse(c, p.Sugar, http.StatusUnprocessableEntity, err)
 		return
 	}

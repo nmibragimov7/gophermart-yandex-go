@@ -5,7 +5,7 @@ import (
 	"go-musthave-diploma-tpl/internal/models/entity"
 	"go-musthave-diploma-tpl/internal/repository"
 	"go-musthave-diploma-tpl/internal/session"
-	"go-musthave-diploma-tpl/internal/utils/moonChecker"
+	"go-musthave-diploma-tpl/internal/utils/moonchecker"
 	"io"
 	"net/http"
 
@@ -29,7 +29,7 @@ func (p *HandlerProvider) OrderSaveHandler(c *gin.Context) {
 		return
 	}
 	orderNumber := string(body)
-	if orderNumber == "" || !moonChecker.MoonChecker(orderNumber) {
+	if orderNumber == "" || !moonchecker.MoonChecker(orderNumber) {
 		sendErrorResponse(c, p.Sugar, http.StatusUnprocessableEntity, err)
 		return
 	}

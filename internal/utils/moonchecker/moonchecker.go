@@ -1,4 +1,4 @@
-package moonChecker
+package moonchecker
 
 import "unicode"
 
