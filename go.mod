@@ -1,6 +1,6 @@
 module go-musthave-diploma-tpl
 
-go 1.22.12
+go 1.22.4
 
 require (
 	github.com/gin-gonic/gin v1.10.0
