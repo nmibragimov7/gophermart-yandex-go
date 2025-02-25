@@ -1,15 +1,18 @@
 package response
 
-import "fmt"
+import (
+	"fmt"
+	"go-musthave-diploma-tpl/internal/models/entity"
+)
 
 type Response struct {
 	Message string `json:"message"`
 }
 
 type Accrual struct {
-	Order   string   `json:"order"`
-	Status  string   `json:"status"`
-	Accrual *float64 `json:"accrual,omitempty"`
+	Order   string             `json:"order"`
+	Status  entity.OrderStatus `json:"status"`
+	Accrual *float64           `json:"accrual,omitempty"`
 }
 
 type TooManyRequestsError struct {

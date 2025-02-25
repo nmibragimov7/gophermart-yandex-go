@@ -123,18 +123,23 @@ func (p *RepositoryProvider) UpdateOrderBatches(data []*entity.AccrualWithUserID
 	params := make([]interface{}, 0, len(data)*3)
 	orderNumbers := make([]string, 0, len(data))
 
+	// Заполняем CASE для status
 	for i, record := range data {
-		query += fmt.Sprintf("WHEN $%d THEN $%d ", i*3+1, i*3+2)
+		query += fmt.Sprintf("WHEN $%d THEN $%d::order_status ", i*2+1, i*2+2)
 		params = append(params, record.Order, record.Status)
-		orderNumbers = append(orderNumbers, fmt.Sprintf("$%d", i*3+3))
+		orderNumbers = append(orderNumbers, fmt.Sprintf("$%d", i*2+1)) // Сохраняем order numbers
 	}
 
+	// Закрываем CASE для status и начинаем CASE для accrual
 	query += "END, accrual = CASE number "
+	offset := len(data) * 2 // Новый offset для индексов параметров accrual
+
 	for i, record := range data {
-		query += fmt.Sprintf("WHEN $%d THEN $%d ", i*3+1, i*3+2+len(data))
+		query += fmt.Sprintf("WHEN $%d THEN $%d::NUMERIC ", offset+i*2+1, offset+i*2+2)
 		params = append(params, record.Order, record.Accrual)
 	}
 
+	// Завершаем запрос
 	query += fmt.Sprintf("END WHERE number IN (%s)", stringJoin(orderNumbers, ", "))
 
 	_, err = tx.Exec(query, params...)

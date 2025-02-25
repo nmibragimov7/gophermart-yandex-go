@@ -6,6 +6,7 @@ import (
 	"go-musthave-diploma-tpl/internal/handlers"
 	"go-musthave-diploma-tpl/internal/jobs"
 	"go-musthave-diploma-tpl/internal/logger"
+	"go-musthave-diploma-tpl/internal/models/entity"
 	"go-musthave-diploma-tpl/internal/repository"
 	"go-musthave-diploma-tpl/internal/router"
 	"go-musthave-diploma-tpl/internal/session"
@@ -75,6 +76,7 @@ func run() error {
 		Config:     cnf,
 		Sugar:      sgr,
 		Repository: rps,
+		Channel:    make(chan *entity.AccrualWithUserID),
 	}
 	go jbp.Run(time.Duration(10) * time.Second)
 	go jbp.Flush()

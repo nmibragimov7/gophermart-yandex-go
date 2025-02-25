@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+type OrderStatus string
+
 type User struct {
 	ID        int64  `json:"id"`
 	Login     string `json:"login"`
@@ -18,9 +20,9 @@ type OrderWithUserID struct {
 
 type Order struct {
 	OrderWithUserID
-	Accrual    float64   `json:"accrual,omitempty"`
-	Status     string    `json:"status"`
-	UploadedAt time.Time `json:"uploaded_at"`
+	Accrual    float64     `json:"accrual,omitempty"`
+	Status     OrderStatus `json:"status"`
+	UploadedAt time.Time   `json:"uploaded_at"`
 }
 
 type Balance struct {
@@ -35,8 +37,8 @@ type Withdraw struct {
 }
 
 type AccrualWithUserID struct {
-	UserID  int64    `json:"user_id"`
-	Order   string   `json:"order"`
-	Status  string   `json:"status"`
-	Accrual *float64 `json:"accrual,omitempty"`
+	UserID  int64       `json:"user_id"`
+	Order   string      `json:"order"`
+	Status  OrderStatus `json:"status"`
+	Accrual *float64    `json:"accrual,omitempty"`
 }
