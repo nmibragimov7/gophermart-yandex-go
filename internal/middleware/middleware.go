@@ -21,12 +21,6 @@ func AuthMiddleware(sgr *zap.SugaredLogger, cnf *config.Config) gin.HandlerFunc 
 				"info", "incorrect access token",
 			)
 
-			//message := response.Response{
-			//	Message: "Невалидный токен",
-			//}
-
-			//c.Header("Content-Type", "application/json")
-			//c.JSON(http.StatusUnauthorized, message)
 			c.Status(http.StatusUnauthorized)
 			c.Abort()
 			return
