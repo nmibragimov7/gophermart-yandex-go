@@ -4,7 +4,6 @@ import (
 	"go-musthave-diploma-tpl/internal/config"
 	"go-musthave-diploma-tpl/internal/handlers"
 	"go-musthave-diploma-tpl/internal/logger"
-	"go-musthave-diploma-tpl/internal/repository"
 	"go-musthave-diploma-tpl/internal/session"
 	"log"
 	"net/http"
@@ -30,24 +29,17 @@ func TestAuthRouter(t *testing.T) {
 	cnf := config.Init()
 	sgr := logger.Init()
 
-	rps, err := repository.Init(*cnf.DataBase)
-	assert.NoError(t, err)
-	defer func() {
-		err := rps.DB.Close()
-		assert.NoError(t, err)
-	}()
-
 	ssp := &session.SessionProvider{
 		Config: cnf,
 	}
 	hdp := &handlers.HandlerProvider{
-		Repository: rps,
+		Repository: nil,
 		Config:     cnf,
 		Sugar:      sgr,
 		Session:    ssp,
 	}
 	rtr := RouterProvider{
-		Repository: rps,
+		Repository: nil,
 		Config:     cnf,
 		Sugar:      sgr,
 		Handler:    hdp,
