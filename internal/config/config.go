@@ -28,7 +28,7 @@ func Init() *Config {
 	instance.SecretKey = flags.String("s", "secret_key", "JWT secret key")
 	instance.DataBase = flags.String(
 		"d",
-		"",
+		"host=localhost user=postgres password=admin dbname=gophermart sslmode=disable",
 		"Database URL",
 	) // host=localhost user=postgres password=admin dbname=gophermart sslmode=disable
 

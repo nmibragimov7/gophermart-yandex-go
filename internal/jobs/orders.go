@@ -21,7 +21,7 @@ type JobProvider struct {
 }
 
 const (
-	jobsCount = 4
+	jobsCount = 5
 )
 
 func (p *JobProvider) Flush() {
@@ -91,14 +91,20 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 		select {
 		case <-timer.C:
 			interval = initialInterval
-			timer.Reset(interval)
 		case err := <-errorCh:
 			var tooManyRequests *response.TooManyRequestsError
 			if errors.As(err, &tooManyRequests) {
 				interval = time.Duration(tooManyRequests.RetryAfter) * time.Second
 			}
-			timer.Reset(interval)
 		}
+
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer.Reset(interval)
 	}
 }
 func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
@@ -119,14 +125,6 @@ func (p *JobProvider) fanIn(once *sync.Once, doneCh chan struct{}, responsesCh .
 
 		go func(ch chan *entity.AccrualWithUserID) {
 			defer wg.Done()
-
-			//for data := range closureCh {
-			//	select {
-			//	case <-doneCh:
-			//		return
-			//	case p.Channel <- data:
-			//	}
-			//}
 
 			select {
 			case <-doneCh:
