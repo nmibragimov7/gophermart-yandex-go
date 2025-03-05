@@ -23,3 +23,6 @@ vendor/
 .vscode
 
 go_musthave_diploma_tpl_gophermart
+.DS_Store
+cmd/.DS_Store
+internal/.DS_Store
