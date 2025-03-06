@@ -21,7 +21,7 @@ type JobProvider struct {
 }
 
 const (
-	jobsCount = 5
+	jobsCount = 4
 )
 
 func (p *JobProvider) Flush() {
@@ -85,33 +85,63 @@ func (p *JobProvider) Run(initialInterval time.Duration) {
 		once := new(sync.Once)
 		doneCh := make(chan struct{})
 		errorCh := make(chan error, len(orders))
-		responsesCh := p.fanOut(once, doneCh, errorCh, orders)
+		responsesCh := p.workers(once, doneCh, errorCh, orders)
 		p.fanIn(once, doneCh, responsesCh...)
 
 		select {
 		case <-timer.C:
 			interval = initialInterval
+			timer.Reset(interval)
 		case err := <-errorCh:
 			var tooManyRequests *response.TooManyRequestsError
 			if errors.As(err, &tooManyRequests) {
 				interval = time.Duration(tooManyRequests.RetryAfter) * time.Second
 			}
+			<-timer.C
+			timer.Reset(interval)
 		}
-
-		if !timer.Stop() {
-			select {
-			case <-timer.C:
-			default:
-			}
-		}
-		timer.Reset(interval)
 	}
 }
-func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
-	channels := make([]chan *entity.AccrualWithUserID, len(orders))
 
-	for i, order := range orders {
-		channels[i] = p.sendRequest(once, doneCh, errorCh, order)
+//	func (p *JobProvider) fanOut(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
+//		channels := make([]chan *entity.AccrualWithUserID, len(orders))
+//
+//		for i, order := range orders {
+//			channels[i] = p.sendRequest(once, doneCh, errorCh, order)
+//		}
+//
+//		return channels
+//	}
+
+func (p *JobProvider) workers(once *sync.Once, doneCh chan struct{}, errorCh chan error, orders []*entity.OrderWithUserID) []chan *entity.AccrualWithUserID {
+	workerCount := min(jobsCount, len(orders))
+	channels := make([]chan *entity.AccrualWithUserID, workerCount)
+	jobs := make(chan *entity.OrderWithUserID, len(orders))
+
+	for _, order := range orders {
+		jobs <- order
+	}
+	close(jobs)
+
+	for i := 0; i < workerCount; i++ {
+		ch := make(chan *entity.AccrualWithUserID)
+		channels[i] = ch
+
+		go func(ch chan *entity.AccrualWithUserID) {
+			defer close(ch)
+
+			for order := range jobs {
+				select {
+				case <-doneCh:
+					return
+				default:
+					channel := p.sendRequest(once, doneCh, errorCh, order)
+					for res := range channel {
+						ch <- res
+					}
+				}
+			}
+		}(ch)
 	}
 
 	return channels
