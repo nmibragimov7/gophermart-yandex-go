@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17.2
+    container_name: db_container
+    restart: always
+    ports:
+      - "5432:5432"
+    networks:
+      - app_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      retries: 5
+      timeout: 3s
+  accrual:
+    build:
+      context: .
+      dockerfile: Dockerfile.accrual
+    container_name: accrual_container
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_network
+    ports:
+      - "8080:8080"
+  gophermart:
+    build: .
+    container_name: gophermart_container
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "4200:4200"
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
